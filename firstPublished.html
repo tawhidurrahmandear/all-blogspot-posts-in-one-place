@@ -1,0 +1,125 @@
+<!-- all BlogSpot Posts in one place -->
+<!-- developed by Tawhidur Rahman Dear, https://www.tawhidurrahmandear.com -->
+<!-- Live Preview available at https://tawhidurrahmandear.github.io/all-blogspot-posts-in-one-place/ -->
+
+<style>
+.PostList a {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-right: 5px;
+    padding-left: 25px;
+    text-align: left;
+    text-justify: inter-word;
+    text-decoration: none;
+    display: block;
+}
+</style>
+
+<div>
+    <ol class="PostList" id="PostList"></ol>
+</div>
+
+<script type="text/javascript">
+// Configuration
+let startIndex = 1;
+const maxResults = 50;
+const allResults = [];
+
+// Sorting method: Change as needed
+// const sortingMethod = "random";
+const sortingMethod = "firstPublished"; 
+// const sortingMethod = "lastPublished"; 
+// const sortingMethod = "alphabetical"; 
+// const sortingMethod = "reverseAlphabetical"; 
+
+/**
+ * Dynamically loads the JSON feed and processes the data.
+ */
+function sendQuery() {
+    const script = document.createElement("script");
+    script.src = 
+        "https://tawhidurrahmandear.blogspot.com/feeds/posts/summary?alt=json" + 
+        "&callback=processPostList" + 
+        "&start-index=" + startIndex + 
+        "&max-results=" + maxResults;
+    document.body.appendChild(script);
+}
+
+/**
+ * Sorts the fetched results based on the chosen method.
+ */
+function sortResults() {
+    allResults.sort((a, b) => {
+        const titleA = a.querySelector("a").textContent.toLowerCase();
+        const titleB = b.querySelector("a").textContent.toLowerCase();
+        const timeA = a.dataset.timestamp;
+        const timeB = b.dataset.timestamp;
+
+        switch (sortingMethod) {
+            case "alphabetical":
+                return titleA.localeCompare(titleB);
+            case "reverseAlphabetical":
+                return titleB.localeCompare(titleA);
+            case "firstPublished":
+                return timeA - timeB;
+            case "lastPublished":
+                return timeB - timeA;
+			case "random":
+				return Math.random() - 0.5;
+            default:
+                return 0;
+        }
+    });
+}
+
+/**
+ * Renders the sorted results into the DOM.
+ */
+function renderResults() {
+    const postList = document.getElementById("PostList");
+    postList.innerHTML = ""; // Clear previous results
+    sortResults();
+    allResults.forEach((item) => postList.appendChild(item));
+}
+
+/**
+ * Processes the JSON response and populates the results array.
+ */
+function processPostList(root) {
+    const feed = root.feed;
+    const entries = feed.entry || [];
+
+    if (entries.length > 0) {
+        entries.forEach((entry) => {
+            const title = entry.title.$t || "Untitled";
+            const publishedDate = new Date(entry.published.$t).getTime();
+            const link = entry.link.find((l) => l.rel === "alternate")?.href || "#";
+
+            // Create list item
+            const listItem = document.createElement("li");
+            listItem.dataset.timestamp = publishedDate;
+
+            // Create anchor
+            const anchor = document.createElement("a");
+            anchor.href = link;
+            anchor.textContent = title;
+
+            listItem.appendChild(anchor);
+            allResults.push(listItem);
+        });
+
+        // Check if there are more pages to load
+        if (entries.length === maxResults) {
+            startIndex += maxResults;
+            sendQuery();
+        } else {
+            renderResults();
+        }
+    } else {
+        renderResults(); // Render results if no more entries
+    }
+}
+
+// Start fetching the data
+sendQuery();
+</script>
